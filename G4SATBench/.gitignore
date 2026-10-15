@@ -1,0 +1,4 @@
+g4satbench.egg-info
+runs
+/*.sh
+/*.out

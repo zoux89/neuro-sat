@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "g4satbench-compat"
+version = "0.1.0"
+description = "Shims for torch_scatter / kmeans_pytorch so G4SATBench runs on modern torch + PyG"
+requires-python = ">=3.10"
+dependencies = ["torch", "torch_geometric"]
+
+[tool.setuptools]
+packages = ["torch_scatter", "kmeans_pytorch"]

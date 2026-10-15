@@ -1,0 +1,155 @@
+diff --git a/eval_model.py b/eval_model.py
+index 9a1b9a2..ae7c9fc 100644
+--- a/eval_model.py
++++ b/eval_model.py
+@@ -57,9 +57,9 @@ def main():
+ 
+     print('Loading model checkpoint from %s..' % opts.checkpoint)
+     if opts.device.type == 'cpu':
+-        checkpoint = torch.load(opts.checkpoint, map_location='cpu')
++        checkpoint = torch.load(opts.checkpoint, map_location='cpu', weights_only=False)
+     else:
+-        checkpoint = torch.load(opts.checkpoint)
++        checkpoint = torch.load(opts.checkpoint, weights_only=False)
+ 
+     model.load_state_dict(checkpoint['state_dict'], strict=False)
+     model.to(opts.device)
+diff --git a/g4satbench/data/dataset.py b/g4satbench/data/dataset.py
+index 842245d..56fe919 100644
+--- a/g4satbench/data/dataset.py
++++ b/g4satbench/data/dataset.py
+@@ -145,7 +145,7 @@ class SATDataset(Dataset):
+                 label = self.all_labels[split][idx]
+                 file_name = self._get_file_name(split, cnf_filepath)
+                 saved_path = os.path.join(self.processed_dir, file_name)
+-                data = torch.load(saved_path)
++                data = torch.load(saved_path, weights_only=False)
+                 data.y = label
+                 if self.use_contrastive_learning:
+                     data.positive_index = self.positive_indices[split_idx]
+@@ -161,6 +161,6 @@ class SATDataset(Dataset):
+                     label = self.all_labels[split][idx]
+                     file_name = self._get_file_name(split, cnf_filepath)
+                     saved_path = os.path.join(self.processed_dir, file_name)
+-                    data = torch.load(saved_path)
++                    data = torch.load(saved_path, weights_only=False)
+                     data.y = label
+                     return [data]
+diff --git a/g4satbench/generators/3-sat.py b/g4satbench/generators/3-sat.py
+index 5ba9d54..27bfd83 100644
+--- a/g4satbench/generators/3-sat.py
++++ b/g4satbench/generators/3-sat.py
+@@ -4,7 +4,7 @@ import numpy as np
+ import random
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from cnfgen import RandomKCNF
+ from g4satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+@@ -36,8 +36,8 @@ class Generator:
+             n_clauses = int(4.258 * n_vars + 58.26 * pow(n_vars, -2 / 3.))
+             
+             cnf = RandomKCNF(3, n_vars, n_clauses)
+-            clauses = list(cnf.clauses())
+-            clauses = [list(cnf._compress_clause(clause)) for clause in clauses]
++            # cnfgen >=0.9 returns clauses as signed-literal lists directly
++            clauses = [list(clause) for clause in cnf.clauses()]
+ 
+             # ensure the graph in connected
+             vig = VIG(n_vars, clauses)
+diff --git a/g4satbench/generators/ca.py b/g4satbench/generators/ca.py
+index f0f938d..fbbeffd 100644
+--- a/g4satbench/generators/ca.py
++++ b/g4satbench/generators/ca.py
+@@ -4,7 +4,7 @@ import random
+ import subprocess
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from g4satbench.utils.utils import ROOT_DIR, parse_cnf_file, write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+ 
+diff --git a/g4satbench/generators/k-clique.py b/g4satbench/generators/k-clique.py
+index 5d40c53..e94470f 100644
+--- a/g4satbench/generators/k-clique.py
++++ b/g4satbench/generators/k-clique.py
+@@ -4,7 +4,7 @@ import random
+ import networkx as nx
+ import math
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from cnfgen import CliqueFormula
+ from g4satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+diff --git a/g4satbench/generators/k-domset.py b/g4satbench/generators/k-domset.py
+index efa5689..87b6482 100644
+--- a/g4satbench/generators/k-domset.py
++++ b/g4satbench/generators/k-domset.py
+@@ -4,7 +4,7 @@ import random
+ import math
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from cnfgen import DominatingSet
+ from g4satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+diff --git a/g4satbench/generators/k-vercov.py b/g4satbench/generators/k-vercov.py
+index 35e228f..d6bffe8 100644
+--- a/g4satbench/generators/k-vercov.py
++++ b/g4satbench/generators/k-vercov.py
+@@ -4,7 +4,7 @@ import argparse
+ import random
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from cnfgen import VertexCoverFormula
+ from g4satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+diff --git a/g4satbench/generators/ps.py b/g4satbench/generators/ps.py
+index 8f5903d..8224d76 100644
+--- a/g4satbench/generators/ps.py
++++ b/g4satbench/generators/ps.py
+@@ -4,7 +4,7 @@ import random
+ import subprocess
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from g4satbench.utils.utils import ROOT_DIR, parse_cnf_file, write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+ 
+diff --git a/g4satbench/generators/sr.py b/g4satbench/generators/sr.py
+index bbc4673..fb95cfa 100644
+--- a/g4satbench/generators/sr.py
++++ b/g4satbench/generators/sr.py
+@@ -4,7 +4,7 @@ import numpy as np
+ import random
+ import networkx as nx
+ 
+-from pysat.solvers import Cadical
++from pysat.solvers import Cadical195 as Cadical
+ from g4satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
+ from tqdm import tqdm
+ 
+diff --git a/train_model.py b/train_model.py
+index 1773130..424f366 100644
+--- a/train_model.py
++++ b/train_model.py
+@@ -79,9 +79,9 @@ def main():
+     if opts.checkpoint is not None:
+         print('Loading model checkpoint from %s..' % opts.checkpoint)
+         if opts.device.type == 'cpu':
+-            checkpoint = torch.load(opts.checkpoint, map_location='cpu')
++            checkpoint = torch.load(opts.checkpoint, map_location='cpu', weights_only=False)
+         else:
+-            checkpoint = torch.load(opts.checkpoint)
++            checkpoint = torch.load(opts.checkpoint, weights_only=False)
+ 
+         model.load_state_dict(checkpoint['state_dict'], strict=False)
+ 
